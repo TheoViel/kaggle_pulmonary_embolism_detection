@@ -6,3 +6,5 @@ __pycache__
 .vscode
 *.pkl
 *.json
+logs/
+logs2/
