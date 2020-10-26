@@ -8,3 +8,4 @@ __pycache__
 *.json
 logs/
 logs2/
+input/t*

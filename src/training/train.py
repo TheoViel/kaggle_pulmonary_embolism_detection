@@ -16,6 +16,85 @@ from training.optimizer import define_optimizer
 from training.losses import define_loss, prepare_for_loss
 
 
+def train(config, df_train, df_val, fold, log_folder=''):
+    """
+    Trains and validate a model
+
+    Args:
+        config (Config): Parameters.
+        df_train (pandas dataframe): Training metadata.
+        df_val (pandas dataframe): Validation metadata.
+        fold (int): Selected fold.
+        log_folder (str, optional): Folder to logs results to. Defaults to ''.
+
+    Returns:
+        np array: Validation predictions.
+        pandas dataframe: Training history.
+    """
+
+    seed_everything(config.seed)
+
+    model = define_model(
+        config.selected_model, 
+    ).cuda()
+    model.zero_grad()
+
+    train_dataset = PEDatasetImg(df_train, transforms=get_transfos())
+    val_dataset = PEDatasetImg(df_val, transforms=get_transfos(augment=False))
+        
+    n_parameters = count_parameters(model)
+    print(f"    -> {len(train_dataset)} training images")
+    print(f"    -> {len(val_dataset)} validation images")
+    print(f"    -> {n_parameters} trainable parameters\n")
+
+    fit(
+        model,
+        train_dataset,
+        val_dataset,
+        samples_per_patient=config.samples_per_patient,
+        optimizer_name=config.optimizer,
+        loss_name=config.loss,
+        epochs=config.epochs,
+        batch_size=config.batch_size,
+        val_bs=config.val_bs,
+        lr=config.lr,
+        warmup_prop=config.warmup_prop,
+    )
+
+    if config.save_weights:
+        save_model_weights(
+            model,
+            f"{config.selected_model}_{config.name}_{fold}.pt",
+            cp_folder=log_folder,
+        )
+
+
+def k_fold(config, df, log_folder=''):
+    """
+    Performs a patient grouped k-fold cross validation.
+    The following things are saved to the log folder :
+    oof predictions, val predictions, val indices, histories
+
+    Args:
+        config (Config): Parameters.
+        df (pandas dataframe): Metadata.
+        log_folder (str, optional): Folder to logs results to. Defaults to ''.
+    """
+
+    gkf = GroupKFold(n_splits=config.k)
+    splits = list(gkf.split(X=df, y=df, groups=df['StudyInstanceUID']))
+
+
+    for i, (train_idx, val_idx) in enumerate(splits):
+        if i in config.selected_folds:
+            print(f"\n-------------   Fold {i + 1} / {config.k}  -------------\n")
+
+            df_train = df.iloc[train_idx].copy()
+            df_val = df.iloc[val_idx].copy().sample(10000)  # 10k samples is enough to evaluate
+
+            train(config, df_train, df_val, i, log_folder=log_folder)
+
+
 def fit(
     model,
     train_dataset,
@@ -99,34 +178,3 @@ def fit(
             )
 
     torch.cuda.empty_cache()
-
-
-def predict(model, dataset, activation="sigmoid", batch_size=64, num_classes=1):
-    """
-    Usual torch predict function
-    Arguments:
-        model {torch model} -- Model to predict with
-        dataset {torch dataset} -- Dataset to predict with on
-    Keyword Arguments:
-        batch_size {int} -- Batch size (default: {32})
-    Returns:
-        numpy array -- Predictions
-    """
-    model.eval()
-    preds = np.empty((0))
-
-    loader = DataLoader(
-        dataset, batch_size=batch_size, shuffle=False, num_workers=NUM_WORKERS
-    )
-    with torch.no_grad():
-        for x, _ in loader:
-            y_pred = model(x.cuda()).detach()
-
-            if activation == "sigmoid":
-                y_pred = torch.sigmoid(y_pred)
-            elif activation == "softmax":
-                y_pred = torch.softmax(y_pred, -1)
-
-            preds = np.concatenate([preds, y_pred.cpu().numpy()])
-
-    return preds
