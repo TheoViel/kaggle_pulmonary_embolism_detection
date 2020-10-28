@@ -1,6 +1,6 @@
-# Kaggle Birdcall Identification
+# Kaggle RSNA STR Pulmonary Embolism Detection
 
-18th place solution for the [RSNA STR Pulmonary Embolism Detection](https://www.kaggle.com/c/rsna-str-pulmonary-embolism-detection)
+18th place solution for the [RSNA STR Pulmonary Embolism Detection](https://www.kaggle.com/c/rsna-str-pulmonary-embolism-detection) challenge.
 
 ## Context
 
