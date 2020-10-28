@@ -1,6 +1,6 @@
 # Kaggle Birdcall Identification
 
-Xth place solution for the [RSNA STR Pulmonary Embolism Detection](https://www.kaggle.com/c/rsna-str-pulmonary-embolism-detection)
+18th place solution for the [RSNA STR Pulmonary Embolism Detection](https://www.kaggle.com/c/rsna-str-pulmonary-embolism-detection)
 
 ## Context
 
@@ -91,3 +91,42 @@ My inference code is available [here](https://www.kaggle.com/theoviel/pe-inferen
 I used clipping to make sure the label assignment rules were respected, which dropped my score of approximately 0.003.
 
 
+## Data
+
+- Competition data is available on the [competition page](https://www.kaggle.com/c/rsna-str-pulmonary-embolism-detection/data)
+
+You do not need to download the 900Gb of dicom files, only the `csv` files are used.
+
+- The training images are available here : [256x256 jpgs](https://www.kaggle.com/vaillant/rsna-str-pe-detection-jpeg-256)
+
+The relative location of the images `IMG_PATH` is specified in `params.py`, which can be adapted to your environment.
+
+
+## Repository structure
+
+- `input` : Input metadata expects to be here.
+- `notebooks` : Notebook I used to experiment quickly on 2nd level models.
+- `output` : Some outputs of the code.
+- `src` : Source code.
+- `logs` : Folder to save the logs to. Has to be created.
+
+## Training
+
+To retrain your own models, run the following scripts, which are in the `src` folder:
+
+- `main.py` : Trains the first level models,
+- `extract_features.py` : Extracts features using the trained models,
+- `main_lvl2.py` : Trains second level models using extracted features.
+
+Make sure to adapt the directories accordingly, to specify where to save and/or load the weights, features and images. 
+They are either specified in the three scripts above or in `params.py`.
+
+Batch sizes were chosen in order to fit in a single RTX 2080 Ti : 
+- Training a CNN fold takes approximately 9 hours,
+- Extracting the features takes 2 hours,
+- Training a second level model fold takes about 15 minutes.
+
+## Inference
+
+- To reproduce our final score, fork this notebook [notebook](https://www.kaggle.com/theoviel/pe-inference-2) in the kaggle kernels.
+- Model weights are available [on Kaggle](https://www.kaggle.com/theoviel/peweights/). Only the `efficientnet-b3` and `rnn_2` ones are used. 
