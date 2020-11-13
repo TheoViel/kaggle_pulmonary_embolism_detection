@@ -1,12 +1,12 @@
 import os
-import re
 import cv2
 import torch
+import numpy as np
 
 from tqdm.notebook import tqdm
 from torch.utils.data import Dataset
 
-from params import *
+from params import IMG_PATH, FEATURES_PATH, IMG_TARGET, EXAM_TARGETS, MAX_LEN
 
 
 def sop_to_img(sop, folder):
@@ -60,13 +60,36 @@ class PEDatasetImg(Dataset):
         return image, y
 
 
+class PatientDataset(Dataset):
+    """
+    Dataset for feature extraction
+    """
+
+    def __init__(self, path, transforms=None):
+        self.path = path
+        self.img_paths = sorted(os.listdir(path))
+
+        self.transforms = transforms
+
+    def __len__(self):
+        return len(self.img_paths)
+
+    def __getitem__(self, idx):
+        image = cv2.imread(self.path + self.img_paths[idx])
+
+        if self.transforms:
+            image = self.transforms(image=image)["image"]
+
+        return image, idx
+
+
 class PEDatasetFt(Dataset):
     def __init__(self, df, paths=[FEATURES_PATH], max_len=MAX_LEN):
         self.df = df
-        self.paths = [[path + p  for path in paths] for p in self.df['path'].values]
+        self.paths = [[path + p for path in paths] for p in self.df["path"].values]
 
         self.max_len = max_len
-        
+
         self.img_targets = df[IMG_TARGET].values
         self.exam_targets = df[EXAM_TARGETS].values
 
@@ -81,20 +104,20 @@ class PEDatasetFt(Dataset):
     def pad(self, x):
         length = x.shape[0]
         if length > self.max_len:
-            return x[:self.max_len]
+            return x[: self.max_len]
         else:
             padded = np.zeros([self.max_len] + list(x.shape[1:]))
             padded[:length] = x
             return padded
-        
+
     def __getitem__(self, idx):
         ft = np.concatenate([np.load(p) for p in self.paths[idx]], -1)
         size = min(ft.shape[0], self.max_len)
         ft = self.pad(ft)
 
         return (
-            torch.tensor(ft, dtype=torch.float), 
-            torch.tensor(self.exam_targets[idx], dtype=torch.float), 
+            torch.tensor(ft, dtype=torch.float),
+            torch.tensor(self.exam_targets[idx], dtype=torch.float),
             torch.tensor(self.img_targets[idx], dtype=torch.float),
-            torch.tensor(size,  dtype=torch.int64)
+            torch.tensor(size, dtype=torch.int64),
         )

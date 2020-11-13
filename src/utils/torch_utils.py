@@ -2,8 +2,6 @@ import os
 import torch
 import random
 import numpy as np
-import torch.nn as nn
-
 
 
 def seed_everything(seed):
@@ -19,7 +17,7 @@ def seed_everything(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = True 
+    torch.backends.cudnn.benchmark = True
 
 
 def save_model_weights(model, filename, verbose=1, cp_folder=""):
@@ -57,7 +55,7 @@ def load_model_weights(model, filename, verbose=1, cp_folder=""):
     if verbose:
         print(f"\n -> Loading weights from {os.path.join(cp_folder,filename)}\n")
     try:
-        model.load_state_dict(os.path.join(cp_folder, filename), strict=strict)
+        model.load_state_dict(os.path.join(cp_folder, filename), strict=True)
     except BaseException:
         model.load_state_dict(
             torch.load(os.path.join(cp_folder, filename), map_location="cpu"),
@@ -83,4 +81,3 @@ def count_parameters(model, all=False):
         return sum(p.numel() for p in model.parameters())
     else:
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
-

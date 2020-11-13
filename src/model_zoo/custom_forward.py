@@ -1,10 +1,9 @@
 import torch
-import torch.nn.functional as F
 
 
 def add_ft_extractor(resnet):
     resnet.extract_ft = lambda x: forward_extract_ft(resnet, x)
-    
+
 
 def forward_extract_ft(self, x):
     x = self.conv1(x)
@@ -27,7 +26,7 @@ def forward_extract_ft(self, x):
 
 def add_ft_extractor_enet(effnet):
     effnet.extract_ft = lambda x: forward_extract_ft_enet(effnet, x)
-    
+
 
 def forward_extract_ft_enet(self, x):
     x = self.extract_features(x)

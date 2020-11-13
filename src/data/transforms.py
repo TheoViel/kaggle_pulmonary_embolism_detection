@@ -29,24 +29,28 @@ def distortion_transforms(p):
         p=p,
     )
 
+
 def normalizer(mean=MEAN, std=STD):
-    return albu.Compose([
-                albu.Normalize(mean=mean, std=std),
-                AT.transforms.ToTensor(),
-            ],
-            p=1,
-        )
+    return albu.Compose(
+        [
+            albu.Normalize(mean=mean, std=std),
+            AT.transforms.ToTensor(),
+        ],
+        p=1,
+    )
 
 
 def get_transfos(augment=True, visualize=False):
     if visualize:
-        return albu.Compose([
+        return albu.Compose(
+            [
                 albu.HorizontalFlip(p=0.5),
                 albu.VerticalFlip(p=0.5),
                 albu.ShiftScaleRotate(shift_limit=0.1, rotate_limit=45, p=0.5),
                 color_transforms(p=0.5),
                 distortion_transforms(p=0.5),
-            ])
+            ]
+        )
 
     if augment:
         return albu.Compose(

@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from sklearn.model_selection import KFold
 from transformers import get_linear_schedule_with_warmup
 
-from params import *
+from params import NUM_EXAM_TARGETS
 from utils.metric import rsna_metric
 from data.dataset import PEDatasetFt
 from training.losses import RSNAWLoss
@@ -20,8 +20,8 @@ def fit(
     model,
     train_dataset,
     val_dataset,
-    optimizer_name='adam',
-    loss_name='bce',
+    optimizer_name="adam",
+    loss_name="bce",
     epochs=10,
     batch_size=32,
     val_bs=32,
@@ -36,20 +36,20 @@ def fit(
         optimizer = SWA(optimizer)
 
     loss_fct = RSNAWLoss()
-    
+
     train_loader = DataLoader(
-        train_dataset, 
-        batch_size=batch_size, 
+        train_dataset,
+        batch_size=batch_size,
         num_workers=8,
         shuffle=True,
-        pin_memory=True
+        pin_memory=True,
     )
 
     val_loader = DataLoader(
-        val_dataset, 
-        batch_size=val_bs, 
-        shuffle=False, 
-        num_workers=8, 
+        val_dataset,
+        batch_size=val_bs,
+        shuffle=False,
+        num_workers=8,
         pin_memory=True,
     )
 
@@ -65,14 +65,16 @@ def fit(
         start_time = time()
 
         avg_loss = 0
-        t2 = time()
+
         for x, y_exam, y_img, sizes in train_loader:
             pred_exam, pred_img = model(x.cuda())
 
-            loss = loss_fct(y_img.cuda(), y_exam.cuda(), pred_img, pred_exam, sizes.cuda())
+            loss = loss_fct(
+                y_img.cuda(), y_exam.cuda(), pred_img, pred_exam, sizes.cuda()
+            )
             loss.backward()
             avg_loss += loss.item() / len(train_loader)
-            
+
             optimizer.step()
             scheduler.step()
 
@@ -84,23 +86,33 @@ def fit(
             optimizer.swap_swa_sgd()
 
         model.eval()
-        avg_val_loss = 0.
+        avg_val_loss = 0.0
         sizes = np.empty((0))
         pred_exams = np.empty((0, NUM_EXAM_TARGETS))
         pred_imgs = np.empty((0, val_dataset.max_len))
-        
+
         with torch.no_grad():
             for x, y_exam, y_img, size in val_loader:
                 pred_exam, pred_img = model(x.cuda())
-                
-                loss = loss_fct(y_img.cuda(), y_exam.cuda(), pred_img.detach(), pred_exam.detach(), size.cuda())
-                
+
+                loss = loss_fct(
+                    y_img.cuda(),
+                    y_exam.cuda(),
+                    pred_img.detach(),
+                    pred_exam.detach(),
+                    size.cuda(),
+                )
+
                 avg_val_loss += loss.item() / len(val_loader)
-            
-                pred_exams = np.concatenate([pred_exams, torch.sigmoid(pred_exam).detach().cpu().numpy()])
-                pred_imgs = np.concatenate([pred_imgs, torch.sigmoid(pred_img).detach().cpu().numpy()])
+
+                pred_exams = np.concatenate(
+                    [pred_exams, torch.sigmoid(pred_exam).detach().cpu().numpy()]
+                )
+                pred_imgs = np.concatenate(
+                    [pred_imgs, torch.sigmoid(pred_img).detach().cpu().numpy()]
+                )
                 sizes = np.concatenate([sizes, size.numpy()])
-                
+
         score = rsna_metric(
             val_dataset.img_targets,
             val_dataset.exam_targets,
@@ -117,19 +129,18 @@ def fit(
             elapsed_time = elapsed_time * verbose
             lr = scheduler.get_last_lr()[0]
             print(
-                f"Epoch {epoch + 1:02d}/{epochs:02d} \t lr={lr:.1e} \t t={elapsed_time:.0f}s  \t loss={avg_loss:.3f} \t ",
+                f"Epoch {epoch + 1:02d}/{epochs:02d} \t lr={lr:.1e} \t t={elapsed_time:.0f}s"
+                f"\t loss={avg_loss:.3f} \t ",
                 end="",
             )
-            print(
-                f"val_loss={avg_val_loss:.3f}\t score={score:.4f}"
-            )
+            print(f"val_loss={avg_val_loss:.3f}\t score={score:.4f}")
 
     torch.cuda.empty_cache()
-    
+
     return pred_exams, pred_imgs, sizes
 
 
-def train(config, df_train, df_val, fold, log_folder=''):
+def train(config, df_train, df_val, fold, log_folder=""):
     """
     Trains and validate a model
 
@@ -148,18 +159,18 @@ def train(config, df_train, df_val, fold, log_folder=''):
     seed_everything(config.seed)
 
     model = RNNModel(
-        ft_dim=config.ft_dim, 
+        ft_dim=config.ft_dim,
         lstm_dim=config.lstm_dim,
         dense_dim=config.dense_dim,
         logit_dim=config.logit_dim,
         use_msd=config.use_msd,
     ).cuda()
-        
+
     model.zero_grad()
 
     train_dataset = PEDatasetFt(df_train, max_len=config.max_len, paths=config.ft_path)
     val_dataset = PEDatasetFt(df_val, max_len=config.max_len, paths=config.ft_path)
-        
+
     n_parameters = count_parameters(model)
     print(f"    -> {len(train_dataset)} training images")
     print(f"    -> {len(val_dataset)} validation images")
@@ -185,11 +196,11 @@ def train(config, df_train, df_val, fold, log_folder=''):
             f"{config.name}_{fold}.pt",
             cp_folder=log_folder,
         )
-        
+
     return pred_exams, pred_imgs, sizes
 
 
-def k_fold(config, df, log_folder=''):
+def k_fold(config, df, log_folder=""):
     """
     Performs a patient grouped k-fold cross validation.
     The following things are saved to the log folder :
@@ -201,11 +212,10 @@ def k_fold(config, df, log_folder=''):
         log_folder (str, optional): Folder to logs results to. Defaults to ''.
     """
 
-    
     pred_exams_oof = np.zeros((len(df), NUM_EXAM_TARGETS))
     pred_imgs_oof = np.zeros((len(df), config.max_len))
     sizes_oof = np.zeros(len(df))
-        
+
     kf = KFold(n_splits=config.k)
     splits = list(kf.split(X=df))
 
@@ -216,10 +226,12 @@ def k_fold(config, df, log_folder=''):
             df_train = df.iloc[train_idx].copy()
             df_val = df.iloc[val_idx].copy()
 
-            pred_exams, pred_imgs, sizes = train(config, df_train, df_val, i, log_folder=log_folder)
-            
+            pred_exams, pred_imgs, sizes = train(
+                config, df_train, df_val, i, log_folder=log_folder
+            )
+
             pred_exams_oof[val_idx] = pred_exams
             pred_imgs_oof[val_idx] = pred_imgs
             sizes_oof[val_idx] = sizes
-    
+
     return pred_exams_oof, pred_imgs_oof, sizes_oof

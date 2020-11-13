@@ -5,7 +5,6 @@ import datetime
 import numpy as np
 import pandas as pd
 
-from params import LOG_PATH
 
 LOGGED_IN_CONFIG = []
 
@@ -72,4 +71,3 @@ def save_config(config, path):
     config_df.to_csv(path + ".csv", index=False)
 
     return config_df
-

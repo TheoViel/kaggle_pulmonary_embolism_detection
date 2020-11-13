@@ -13,7 +13,7 @@ IMG_PATH = "../../../data/pe/train-jpegs/"
 FEATURES_PATH = "../../../data/pe/train-fts/"
 
 LOG_PATH = "../logs/"
-LOG_PATH_2 = '../logs2/'
+LOG_PATH_2 = "../logs2/"
 
 
 MEAN = np.array([0.485, 0.456, 0.406])
