@@ -2,6 +2,7 @@
 
 18th place solution for the [RSNA STR Pulmonary Embolism Detection](https://www.kaggle.com/c/rsna-str-pulmonary-embolism-detection) challenge.
 
+
 ## Context
 
 > In this competition, you’ll detect and classify pulmonary embolism (PE) cases. In particular, you'll use chest CTPA images (grouped together as studies) and your data science skills to enable more accurate identification of PE. If successful, you'll help reduce human delays and errors in detection and treatment.
@@ -10,6 +11,8 @@ For each study, an overal diagnosis consisting of 9 exam labels as well as wheth
 The metric is a weighted log loss of the several targets, explained [here](https://www.kaggle.com/c/rsna-str-pulmonary-embolism-detection/overview/evaluation). 
 
 ## Solution Overview
+
+<img src="pipeline.png" alt="drawing" width="750"/>
 
 ### Introduction
 
